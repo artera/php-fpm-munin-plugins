@@ -1,0 +1,65 @@
+#!/bin/sh
+# -*- sh -*-
+#
+# Plugin to monitor memory usage of php-fpm pools.
+#
+# Parameters:
+#
+# config (required)
+# autoconf (optional - used by munin-config)
+#
+# Magick markers (optional - used by munin-config and som installation scripts):
+#%# family=manual
+#%# capabilities=autoconf
+
+BASEDIR=$(dirname $(readlink -f $0))
+OIFS="$IFS"
+
+. "$BASEDIR/phpfpm_functions"
+
+[ "$1" = "autoconf" ] && autoconf
+
+fpm_pids=$(fpm_pids)
+pools=$(echo "$fpm_pids" | awk '{print $1}' | uniq -c)
+
+IFS="
+"
+if [ "$1" = "config" ]; then
+	echo 'graph_title PHP-FPM Memory Usage'
+	echo 'graph_args --base 1024'
+	echo 'graph_vlabel RAM (Kb)'
+	echo 'graph_category PHP'
+
+	for pool in $pools; do
+		IFS="$OIFS" pool=($pool)
+		pool=${pool[1]}
+
+		echo "php_ram_$pool.label Ram used by pool $pool"
+	done
+
+	echo "php_total_ram.label Total ram used by php-fpm"
+
+	exit 0
+fi
+
+total=0
+ram=0
+for pool in $fpm_pids; do
+	IFS="$OIFS" pool=($pool)
+	pid=${pool[1]}
+	pool=${pool[0]}
+
+	if [[ ! -z "$prev_pool" && "$pool" != "$prev_pool" ]]; then
+		echo "php_ram_$prev_pool.value $ram"
+		ram=0
+	fi
+
+	poolram=$(grep -E '^VmRSS:' /proc/$pid/status | awk '{print $2}')
+	ram=$((ram + poolram))
+
+	prev_pool="$pool"
+	total=$((total+poolram))
+done
+
+echo "php_ram_$pool.value $ram"
+echo "php_total_ram.value $total"
