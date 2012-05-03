@@ -41,20 +41,24 @@ if [ "$1" = "config" ]; then
 
 	for pool in $pools; do
 		pool=$(echo $pool | cut -d- -f2)
-		echo "php_processes_$pool.label PHP-FPM: pool $pool"
+		echo "php_processes_$pool.label PHP-FPM pool $pool"
 		echo "php_processes_$pool.draw LINE2"
 		echo "php_processes_$pool.info The number of processes of the pool $pool"
 	done
 
-	echo "php_processes-total.label PHP-FPM processes"
-	echo "php_processes-total.draw LINE2"
-	echo "php_processes-total.info The total number of php-fpm processes"
+	echo "php_total_processes.label PHP-FPM total processes"
+	echo "php_total_processes.draw LINE2"
+	echo "php_total_processes.info The total number of php-fpm processes"
 
 	exit 0
 fi
 
+total=0
 for pool in $pools; do
 	count=$(echo $pool | cut -d- -f1)
 	pool=$(echo $pool | cut -d- -f2)
+	total=$((total+count))
 	echo "php_processes_$pool.value $count"
 done
+
+echo "php_total_processes.value $total"
