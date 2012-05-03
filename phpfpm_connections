@@ -1,0 +1,51 @@
+#!/bin/sh
+# -*- sh -*-
+#
+# Plugin to php-fpm connections.
+#
+# Parameters:
+#
+# config (required)
+# autoconf (optional - used by munin-config)
+#
+# Magick markers (optional - used by munin-config and som installation scripts):
+#%# family=manual
+#%# capabilities=autoconf
+
+BASEDIR=$(dirname $(readlink -f $0))
+
+. "$BASEDIR/phpfpm_functions"
+
+[ "$1" = "autoconf" ] && autoconf
+
+IFS=\; pools=($FPM_STATUS_URL)
+
+if [ "$1" = "config" ]; then
+	echo "graph_title PHP-FPM connections
+graph_args --base 1024 -l 0
+graph_vlabel Connections
+graph_category PHP
+graph_order Connections"
+
+	for pool in "${pools[@]}"; do
+		IFS=\= data=($pool)
+		name=${data[0]}
+
+		echo "connections_$name.label $name
+connections_$name.type DERIVE
+connections_$name.min 0"
+	done
+	exit 0
+fi
+
+for pool in "${pools[@]}"; do
+	IFS=\= data=($pool)
+	name=${data[0]}
+	url=${data[1]}
+	[ -z "$url" ] && url=$name
+
+	pool_status=$(get_pool_status "$url")
+
+	echo -n "connections_$name.value "
+	echo "$pool_status" | grep -E "^accepted conn:" | awk '{print $3}'
+done
