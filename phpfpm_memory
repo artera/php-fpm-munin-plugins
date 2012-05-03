@@ -27,7 +27,7 @@ IFS="
 if [ "$1" = "config" ]; then
 	echo 'graph_title PHP-FPM Memory Usage'
 	echo 'graph_args --base 1024'
-	echo 'graph_vlabel RAM (Kb)'
+	echo 'graph_vlabel RAM'
 	echo 'graph_category PHP'
 
 	for pool in $pools; do
@@ -54,7 +54,7 @@ for pool in $fpm_pids; do
 		ram=0
 	fi
 
-	poolram=$(grep -E '^VmRSS:' /proc/$pid/status | awk '{print $2}')
+	poolram=$(($(grep -E '^VmRSS:' /proc/$pid/status | awk '{print $2}') * 1024))
 	ram=$((ram + poolram))
 
 	prev_pool="$pool"
