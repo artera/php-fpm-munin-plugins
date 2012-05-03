@@ -1,0 +1,18 @@
+#!/bin/sh
+
+PHP_BIN=${phpbin:-"php-fpm"}
+
+function autoconf {
+	which "$PHP_BIN" > /dev/null 2>&1 && echo yes || echo no
+	exit 0
+}
+
+function fpm_pids {
+	for pid in $(pidof "$PHP_BIN"); do
+		cmdline=$(cat /proc/$pid/cmdline)
+		if echo "$cmdline" | grep -qE "^php-fpm: pool "; then
+			pool=${cmdline:14}
+			echo $pool $pid
+		fi
+	done | sort
+}
