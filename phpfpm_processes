@@ -13,13 +13,16 @@
 #%# capabilities=autoconf
 
 BASEDIR=$(dirname $(readlink -f $0))
+OIFS="$IFS"
 
 . "$BASEDIR/phpfpm_functions"
 
 [ "$1" = "autoconf" ] && autoconf
 
-pools=($(fpm_pids | awk '{print $1}' | uniq -c | sed -r 's|([0-9]) +|\1:|g'))
+pools=$(fpm_pids | awk '{print $1}' | uniq -c)
 
+IFS="
+"
 if [ "$1" = "config" ]; then
 	echo 'graph_title PHP-FPM Processes'
 	echo 'graph_args --base 1000 -l 0 '
@@ -27,8 +30,10 @@ if [ "$1" = "config" ]; then
 	echo 'graph_category PHP'
 	echo 'graph_info This graph shows the number of PHP-FPM processes in the system.'
 
-	for pool in "${pools[@]}"; do
-		pool=$(echo $pool | cut -d: -f2)
+	for pool in $pools; do
+		IFS="$OIFS" pool=($pool)
+		pool=${pool[1]}
+
 		echo "php_processes_$pool.label PHP-FPM pool $pool"
 		echo "php_processes_$pool.draw LINE2"
 		echo "php_processes_$pool.info The number of processes of the pool $pool"
@@ -42,13 +47,10 @@ if [ "$1" = "config" ]; then
 fi
 
 total=0
-for pool in "${pools[@]}"; do
-	OIFS="$IFS"
-	IFS=:
-	pool=($pool)
+for pool in $pools; do
+	IFS="$OIFS" pool=($pool)
 	count=${pool[0]}
 	pool=${pool[1]}
-	IFS="$OIFS"
 
 	echo "php_processes_$pool.value $count"
 	total=$((total+count))
