@@ -9,7 +9,7 @@
 # autoconf (optional - used by munin-config)
 #
 # Magick markers (optional - used by munin-config and som installation scripts):
-#%# family=manual
+#%# family=auto
 #%# capabilities=autoconf
 
 BASEDIR=$(dirname $(readlink -f $0))
@@ -35,12 +35,10 @@ if [ "$1" = "config" ]; then
 		pool=${pool[1]}
 
 		echo "php_processes_$pool.label PHP-FPM pool $pool"
-		echo "php_processes_$pool.draw LINE2"
 		echo "php_processes_$pool.info The number of processes of the pool $pool"
 	done
 
 	echo "php_total_processes.label PHP-FPM total processes"
-	echo "php_total_processes.draw LINE2"
 	echo "php_total_processes.info The total number of php-fpm processes"
 
 	exit 0
