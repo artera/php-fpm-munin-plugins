@@ -1,0 +1,60 @@
+#!/bin/sh
+# -*- sh -*-
+#
+# Plugin to monitor the number of processes of a php-fpm pool.
+#
+# Parameters:
+#
+# config (required)
+# autoconf (optional - used by munin-config)
+#
+# Magick markers (optional - used by munin-config and som installation scripts):
+#%# family=manual
+#%# capabilities=autoconf
+
+PHP_BIN=${phpbin:-"php-fpm"}
+
+if [ "$1" = "autoconf" ]; then
+	which "$PHP_BIN" > /dev/null 2>&1 && echo yes || echo no
+	exit 0
+fi
+
+pools=$(
+	for pid in $(pidof "$PHP_BIN"); do
+		cmdline=$(cat /proc/$pid/cmdline)
+		if echo "$cmdline" | grep -qE "^php-fpm: pool "; then
+			pool=${cmdline:14}
+			echo $pool
+		fi
+	done | sort | uniq -c | while read pool; do
+		echo $pool | sed -r 's|([0-9]+) (.*)|\1-\2|g'
+	done
+)
+
+
+if [ "$1" = "config" ]; then
+	echo 'graph_title PHP-FPM Processes'
+	echo 'graph_args --base 1000 -l 0 '
+	echo 'graph_vlabel PHP-FPM Processes'
+	echo 'graph_category PHP'
+	echo 'graph_info This graph shows the number of PHP-FPM processes in the system.'
+
+	for pool in $pools; do
+		pool=$(echo $pool | cut -d- -f2)
+		echo "php_processes_$pool.label PHP-FPM: pool $pool"
+		echo "php_processes_$pool.draw LINE2"
+		echo "php_processes_$pool.info The number of processes of the pool $pool"
+	done
+
+	echo "php_processes-total.label PHP-FPM processes"
+	echo "php_processes-total.draw LINE2"
+	echo "php_processes-total.info The total number of php-fpm processes"
+
+	exit 0
+fi
+
+for pool in $pools; do
+	count=$(echo $pool | cut -d- -f1)
+	pool=$(echo $pool | cut -d- -f2)
+	echo "php_processes_$pool.value $count"
+done
